@@ -6,27 +6,29 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-import time
+import time, random
 
-# # Set up Chrome options
-chrome_options = Options()
-chrome_options.add_argument("--headless")  # Run Chrome in headless mode (no GUI)
-chrome_options.add_argument("--disable-gpu")  # Disable GPU acceleration for headless mode
-chrome_options.add_argument("--window-size=1920x1080")  # Set window size for headless mode
-chrome_options.add_argument("--disable-dev-shm-usage")  # Fixes issues with /dev/shm
-chrome_options.add_argument("--pageLoadStrategy=none") # page load strategy
+def random_delay():
+    delay = random.uniform(3,5)  # Adjust the range as needed
+    time.sleep(delay)
 
-# Set a User-Agent header to mimic a legitimate browser request
-chrome_options.add_argument(
-    "user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
-)
+def htmlsoup(url, headless):
+    # # Set up Chrome options
+    chrome_options = Options()
+    if headless:
+        chrome_options.add_argument("--headless")  # Run Chrome in headless mode (no GUI)
 
-def htmlsoup(url):
+    chrome_options.add_argument("--disable-gpu")  # Disable GPU acceleration for headless mode
+    chrome_options.add_argument("--window-size=1920x1080")  # Set window size for headless mode
+    chrome_options.add_argument("--disable-dev-shm-usage")  # Fixes issues with /dev/shm
+    chrome_options.add_argument("--pageLoadStrategy=eager") # page load strategy
+    chrome_options.add_argument("--incognito") # incognico
+    chrome_options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36") # Set a User-Agent header to mimic a legitimate browser request
 
-        # Use Selenium to open the page and let JavaScript render it
-    # driver = webdriver.Chrome(executable_path = '/Users/dolee/repo/chromedriver/chromedriver', options = chrome_options)  # You need to have ChromeDriver installed and in your PATH
+    # Use Selenium to open the page and let JavaScript render it
     driver = webdriver.Chrome(options = chrome_options)  # You need to have ChromeDriver installed and in your PATH
-    driver.get(url)
+    random_delay()  # add random delay to avoid bot scrapping filtering
+    driver.get(url) # get url page
 
     # Get the page source after JavaScript rendering
     page_source = driver.page_source
@@ -39,19 +41,13 @@ def htmlsoup(url):
 
     return soup
 
-# Example usage:
-zip_code = "95136"
-soup = htmlsoup(f'https:\\www.redfin.com/zipcode/{zip_code}')
+def getinfo(property1, headless): #will return detail info of each property1
+    url1 = f'https://www.redfin.com{property1}'
+    print(url1)
 
-properties = []
-for i in range(5):
-    property = soup.find_all('a',class_="slider-item")[i]['href']
-    properties.append(property)
-    print(i)
+    random_delay()
 
-def getinfo(property1):
-    url1 = f'https:\\www.redfin.com{property1}'
-    soup = htmlsoup(url1)
+    soup = htmlsoup(url1, headless)
 
     photo = soup.find('img', class_ = 'landscape widenPhoto')['src']
     address = soup.find('h1', class_='full-address').text
@@ -80,10 +76,58 @@ def getinfo(property1):
 
     return info_dict
 
+# filter
+def gen_url(zip = 95136, type = None, minprice = None, maxprice = None, minbeds = None, maxbeds = None, minbaths = None):
+    url = f'https://www.redfin.com/zipcode/{zip}'
+
+    filters = []
+    filters.append(f'property-type={"+".join(type)}') if type else None
+    filters.append(f'min-price={minprice}k') if minprice else None
+    filters.append(f'max-price={maxprice}k') if maxprice else None
+    filters.append(f'min-beds={minbeds}')   if minbeds else None
+    filters.append(f'max-beds={maxbeds}')   if maxbeds else None
+    filters.append(f'min-baths={minbaths}') if minbaths else None
+    url = f'{url}/filter/{",".join(filters)}' if filters else url
+
+    print(f'the base url was generated with filtering statement: \n {url}')
+
+    return url
+
+# main
+
+#filter
+url = gen_url(zip = 27695, 
+              type = ['house'], 
+              minprice = None, maxprice = 1100, 
+              minbeds = 2, maxbeds = None, minbaths = 2)
+
+soup = htmlsoup(url = url, headless = False)
+
+#get the properties
+properties = []
+for i in range(5):
+    property = soup.find_all('a',class_="slider-item")[i]['href']
+    properties.append(property)
+print('generating 5 properties...')
+
+#get each infos
 infos = []
-for property in properties:
-    info = getinfo(property)
+# for property in properties:
+    print(f'navigating to ... {property}')
+    info = getinfo(property, headless = False
+    )
     infos.append(info)
 
+#take infos to df
+df = pd.DataFrame(infos)
+df[['price','beds','baths', 'sqf']] = df['key1'].apply(lambda x : pd.Series(x))
+
+if len(df['key2'][0]) == 9:
+    df[['daysonredfin','type','year','lotsize','ppsf','op1','op2','agentfee','city']] = df['key2'].apply(lambda x : pd.Series(x))
+
+elif len(df['key2'][0]) == 8:
+    df[['daysonredfin','type','year','ppsf','op1','op2','agentfee','city']] = df['key2'].apply(lambda x : pd.Series(x))
+
+df.drop(columns = ['key1','key2'], inplace = True)
 
 print('done')
