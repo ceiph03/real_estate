@@ -7,19 +7,25 @@ from selenium.webdriver.chrome.options import Options
 # # Set up Chrome options
 chrome_options = Options()
 # chrome_options.add_argument("--headless")  # Run Chrome in headless mode (no GUI)
-chrome_options.add_argument("--disable-gpu")  # Disable GPU acceleration for headless mode
-chrome_options.add_argument("--window-size=1920x1080")  # Set window size for headless mode
-chrome_options.add_argument("--disable-dev-shm-usage")  # Fixes issues with /dev/shm
+# Disable GPU acceleration for headless mode
+chrome_options.add_argument("--disable-gpu")
+# Set window size for headless mode
+chrome_options.add_argument("--window-size=1920x1080")
+# Fixes issues with /dev/shm
+chrome_options.add_argument("--disable-dev-shm-usage")
 
 # Set a User-Agent header to mimic a legitimate browser request
 chrome_options.add_argument(
     "user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
 )
 
+
 def htmlsoup(url):
 
     # Use Selenium to open the page and let JavaScript render it
-    driver = webdriver.Chrome(executable_path = '/Users/dolee/repo/chromedriver/chromedriver', options = chrome_options)  # You need to have ChromeDriver installed and in your PATH
+    # You need to have ChromeDriver installed and in your PATH
+    driver = webdriver.Chrome(
+        options=chrome_options)
     driver.get(url)
 
     # Get the page source after JavaScript rendering
@@ -36,6 +42,7 @@ def htmlsoup(url):
 
     return soup
 
+
 # Example usage:
 zip_code = "95136"
 url = f'https:\\www.redfin.com/zipcode/{zip_code}'
@@ -43,7 +50,7 @@ soup = htmlsoup(url)
 
 properties = []
 for i in range(5):
-    property = soup.find_all('a',class_="slider-item")[i]['href']
+    property = soup.find_all('a', class_="slider-item")[i]['href']
     properties.append(property)
 
 # Step 1: Perform a search
@@ -54,7 +61,7 @@ if search_result:
     soup = BeautifulSoup(search_result, 'html.parser')
     first_property_link = soup.find('a', class_="slider-item")['href']
     property_url = f"https://www.redfin.com{first_property_link}"
-    
+
     # Step 3: Get details from the property page
     property_details = get_property_details(property_url)
 
