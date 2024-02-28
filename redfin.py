@@ -140,7 +140,7 @@ def gen_url(zip = 95136, type = None, minprice = None, maxprice = None, minbeds 
 #get the properties
 properties = []
 for i in range(5):
-    property = soup.find_all('a',class_="slider-item")[i]['href']
+    property = soup.find_all('a', class_="slider-item")[i]['href']
     properties.append(property)
 print('generating 5 properties...')
 
